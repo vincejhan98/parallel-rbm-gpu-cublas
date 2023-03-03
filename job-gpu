@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH -N 1
 #SBATCH -n 1
-#SBATCH -p GPU-shared
+#SBATCH -c gpu
 #SBATCH -t 00:30:00
 #SBATCH --gres=gpu:1
 
