@@ -1,5 +1,7 @@
 #ifndef __CS267_COMMON_H__
 #define __CS267_COMMON_H__
+#include <cublas_v2.h>
+#include <curand_kernel.h>
 
 // Program Constants
 #define nsteps   1000
@@ -22,6 +24,7 @@ typedef struct particle_t {
 
 // Simulation routine
 void init_simulation(particle_t* parts, int num_parts, double size);
+void simulate_one_step(particle_t* parts, int num_parts, double size, double* times);
 void simulate_one_step(particle_t* parts, int num_parts, double size);
-
+void simulate_one_step(int num_nodes, float* d_visibles, float* d_hiddens, float* d_weights, float* d_visible_bias, float* d_hidden_bias, float* d_tmp, float* d_rev_tmp, cublasHandle_t handle, curandState *d_states);
 #endif

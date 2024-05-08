@@ -98,16 +98,22 @@ void init_nodes(int num_nodes, int seed, float* nodes) {
     }
 }
 
-void init_weights_bias(int num_nodes, float* weights,
-               float* visible_bias, float* hidden_bias) {
+void init_weights_bias(int num_nodes, std::vector<std::vector<float>>& weights,
+               std::vector<std::vector<float>>& weights_T,
+               float visible_bias[], float hidden_bias[]) {
     // Initialize random number generator
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_real_distribution<float> dis(-100.0, 100.0); // Distribution for float values between -100 and 100
 
     // Initialize weights matrix and its transpose
-    for (int i = 0; i < num_nodes * num_nodes; ++i) {
-        weights[i] = dis(gen); // Random float value for weight
+    weights.resize(num_nodes, std::vector<float>(num_nodes));
+    weights_T.resize(num_nodes, std::vector<float>(num_nodes));
+    for (int i = 0; i < num_nodes; ++i) {
+        for (int j = 0; j < num_nodes; ++j) {
+            weights[i][j] = dis(gen); // Random float value for weight
+            weights_T[j][i] = weights[i][j]; // Transpose
+        }
     }
 
     // Initialize visible bias
@@ -162,12 +168,12 @@ int main(int argc, char** argv) {
     init_nodes(num_nodes, seed, visibles);
     init_nodes(num_nodes, seed, hiddens);
 
-    // Experiment 3
-    float* weights   = new float[num_nodes * num_nodes];
+    // Experiment 1
+    float weights[]   = {-9, -9, -1, -12, 4, -10, 4, -12, -10};
 
-    float* visible_bias = new float[num_nodes];
-    float* hidden_bias  = new float[num_nodes];
-    init_weights_bias(num_nodes, weights, visible_bias, hidden_bias);
+    float visible_bias[] = {6, 6, 4};
+    float hidden_bias[] = {4, 6, 6};
+
 
     // Initialize cuBLAS
     cublasHandle_t handle;
@@ -199,24 +205,17 @@ int main(int argc, char** argv) {
     cudaMemcpy(d_visible_bias, visible_bias, num_nodes * sizeof(float), cudaMemcpyHostToDevice);
     cudaMemcpy(d_hidden_bias, hidden_bias, num_nodes * sizeof(float), cudaMemcpyHostToDevice);
 
-    auto start_time = std::chrono::steady_clock::now();
-
     for (int step = 0; step < iterations; ++step) {
         simulate_one_step(num_nodes, d_visibles, d_hiddens, d_weights, d_visible_bias, d_hidden_bias, d_tmp, d_rev_tmp, handle, d_states);
-        // cudaDeviceSynchronize();
-        // if (fsave.good()) {
-        //     cudaMemcpy(visibles, d_visibles, num_nodes * sizeof(float), cudaMemcpyDeviceToHost);
-        //     save(fsave, visibles, num_nodes);
-        // }
+        cudaDeviceSynchronize();
+        if (fsave.good()) {
+            cudaMemcpy(visibles, d_visibles, num_nodes * sizeof(float), cudaMemcpyDeviceToHost);
+            save(fsave, visibles, num_nodes);
+        }
     }
-    cudaDeviceSynchronize();
-    auto end_time = std::chrono::steady_clock::now();
 
-    std::chrono::duration<double> diff = end_time - start_time;
-    double seconds = diff.count();
-
-    // Finalize
-    std::cout << "Simulation Time = " << seconds << " seconds for " << num_nodes << " nodes.\n";
+    // Copy result from device to host
+    cudaMemcpy(hiddens, d_hiddens, num_nodes * sizeof(float), cudaMemcpyDeviceToHost);
 
     // Cleanup
     cudaFree(d_weights);

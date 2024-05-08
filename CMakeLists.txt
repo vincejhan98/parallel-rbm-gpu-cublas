@@ -27,7 +27,11 @@ endif ()
 
 add_executable(gpu main.cu gpu.cu common.h)
 target_compile_features(gpu PRIVATE cxx_std_14)
+# target_link_libraries(gpu cublas)
+target_link_libraries(gpu /opt/nvidia/hpc_sdk/Linux_x86_64/23.9/math_libs/12.2/targets/x86_64-linux/lib/libcublas.so)
+
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -arch=sm_80")
+
 set_target_properties(gpu PROPERTIES CUDA_ARCHITECTURES "80")
 
 # Copy the job scripts

@@ -44,9 +44,9 @@ void simulate_one_step(int num_nodes, float* d_visibles, float* d_hiddens, float
     // Perform matrix-vector multiplication
     float alpha = 1.0f;
     float beta = 1.0f;
-
+    
     // W @ V + h_bias
-    cublasSgemv(handle, CUBLAS_OP_N, num_nodes, num_nodes, &alpha, d_weights, num_nodes, d_visibles, 1, &beta, d_tmp, 1);
+    cublasSgemv(handle, CUBLAS_OP_T, num_nodes, num_nodes, &alpha, d_weights, num_nodes, d_visibles, 1, &beta, d_tmp, 1);
 
     // Sigmoid & sample forward
     int block_size = 256;
@@ -63,9 +63,11 @@ void simulate_one_step(int num_nodes, float* d_visibles, float* d_hiddens, float
     cudaMemcpy(d_tmp, d_visible_bias, num_nodes * sizeof(float), cudaMemcpyDeviceToDevice);
 
     // H @ W + h_bias
-    cublasSgemv(handle, CUBLAS_OP_T, num_nodes, num_nodes, &alpha, d_weights, num_nodes, d_hiddens, 1, &beta, d_tmp, 1);
+    cublasSgemv(handle, CUBLAS_OP_N, num_nodes, num_nodes, &alpha, d_weights, num_nodes, d_hiddens, 1, &beta, d_tmp, 1);
 
     // sigmoid and sample
     sigmoid_and_sample<<<num_blocks, block_size>>>(d_tmp, d_visibles, num_nodes, d_states);
     cudaDeviceSynchronize();
+    float clamp = 1;
+    cudaMemcpy(&d_visibles[2], &clamp, sizeof(float), cudaMemcpyHostToDevice);
 }

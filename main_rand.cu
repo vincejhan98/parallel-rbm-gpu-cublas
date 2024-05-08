@@ -163,6 +163,7 @@ int main(int argc, char** argv) {
     init_nodes(num_nodes, seed, hiddens);
 
     // Experiment 3
+    
     float* weights   = new float[num_nodes * num_nodes];
 
     float* visible_bias = new float[num_nodes];
@@ -199,24 +200,17 @@ int main(int argc, char** argv) {
     cudaMemcpy(d_visible_bias, visible_bias, num_nodes * sizeof(float), cudaMemcpyHostToDevice);
     cudaMemcpy(d_hidden_bias, hidden_bias, num_nodes * sizeof(float), cudaMemcpyHostToDevice);
 
-    auto start_time = std::chrono::steady_clock::now();
-
     for (int step = 0; step < iterations; ++step) {
         simulate_one_step(num_nodes, d_visibles, d_hiddens, d_weights, d_visible_bias, d_hidden_bias, d_tmp, d_rev_tmp, handle, d_states);
-        // cudaDeviceSynchronize();
-        // if (fsave.good()) {
-        //     cudaMemcpy(visibles, d_visibles, num_nodes * sizeof(float), cudaMemcpyDeviceToHost);
-        //     save(fsave, visibles, num_nodes);
-        // }
+        cudaDeviceSynchronize();
+        if (fsave.good()) {
+            cudaMemcpy(visibles, d_visibles, num_nodes * sizeof(float), cudaMemcpyDeviceToHost);
+            save(fsave, visibles, num_nodes);
+        }
     }
-    cudaDeviceSynchronize();
-    auto end_time = std::chrono::steady_clock::now();
 
-    std::chrono::duration<double> diff = end_time - start_time;
-    double seconds = diff.count();
-
-    // Finalize
-    std::cout << "Simulation Time = " << seconds << " seconds for " << num_nodes << " nodes.\n";
+    // Copy result from device to host
+    cudaMemcpy(hiddens, d_hiddens, num_nodes * sizeof(float), cudaMemcpyDeviceToHost);
 
     // Cleanup
     cudaFree(d_weights);
